@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Page Refresh Counter and IP</title>
+  <script>
+    // دالة لزيادة العداد عند كل تحديث للصفحة
+    async function incrementRefreshCount() {
+      let refreshCount = localStorage.getItem('refreshCount');  // جلب العدادات المخزنة
+
+      // إذا كانت المرة الأولى للتحديث، قم بتعيين العداد إلى 0
+      if (refreshCount === null) {
+        refreshCount = 0;
+      }
+
+      // زيادة العداد
+      refreshCount = parseInt(refreshCount) + 1;
+
+      // تخزين العدد المحدث في localStorage
+      localStorage.setItem('refreshCount', refreshCount);
+
+      // عرض العداد في الصفحة
+      document.getElementById('refreshCount').textContent = `Page refreshed ${refreshCount} times.`;
+
+      // إرسال الحدث إلى Google Analytics (عدد التحديثات)
+      gtag('event', 'page_refresh', {
+        'refresh_count': refreshCount
+      });
+
+      // الحصول على عنوان IP بعد تحديث العداد
+      await getIP();
+    }
+
+    // الحصول على عنوان IP من خدمة ipify
+    async function getIP() {
+      try {
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        const userIP = data.ip;  // تخزين الـ IP
+        const deviceName = navigator.platform;  // الحصول على اسم النظام (مثل Windows، MacOS، Linux، إلخ)
+
+        // عرض الـ IP واسم الجهاز في الصفحة
+        document.getElementById('ip').textContent = `Your IP is: ${userIP}`;
+        document.getElementById('device').textContent = `Device: ${deviceName}`;
+
+        // إرسال البيانات إلى الخادم الخارجي
+        await sendDataToExternalServer(userIP, deviceName);
+      } catch (error) {
+        console.error('Error fetching IP:', error);
+      }
+    }
+
+    // إرسال بيانات الـ IP واسم الجهاز إلى الخادم الخارجي
+    async function sendDataToExternalServer(ip, device) {
+      try {
+        const response = await fetch('https://example.com/receiveData', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            ip: ip,
+            device: device,
+            refreshCount: localStorage.getItem('refreshCount'),  // إرسال عدد التحديثات أيضًا
+            timestamp: new Date().toISOString()  // إضافة الوقت الذي تم فيه التحديث
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+      } catch (error) {
+        console.error('Error sending data:', error);
+      }
+    }
+
+    // Google Analytics 4
+    function gtag() {
+      window.dataLayer.push(arguments);
+    }
+    window.dataLayer = window.dataLayer || [];
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXX');  // استبدل 'G-XXXXXXX' برقم القياس الخاص بك
+  </script>
+</head>
+<body onload="incrementRefreshCount()">
+  <h1>Welcome to My Page!</h1>
+  
+  <!-- عرض عنوان IP هنا -->
+ 
+  
+  <!-- عرض اسم الجهاز هنا -->
+  
+  
+  <!-- عرض عدد مرات التحديث هنا -->
+  
+
+  <script>
+    // إضافة سكربت للحصول على عنوان IP
+    const script = document.createElement('script');
+    script.src = 'https://api.ipify.org?format=jsonp&callback=getIP';  // استدعاء دالة getIP
+    document.body.appendChild(script);  // إضافة السكربت إلى الصفحة
+  </script>
+</body>
+</html>
